@@ -1,3 +1,5 @@
 /ChessState$ChessMove.class
 /ChessState$ChessMoveIterator.class
 /ChessState.class
+/MiniMax.class
+/ABPruning.class
