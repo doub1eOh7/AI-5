@@ -1,6 +1,8 @@
 import java.io.PrintStream;
+import java.util.regex.*;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Scanner;
 
 /// Represents the state of a chess game
 class ChessState {
@@ -401,15 +403,214 @@ class ChessState {
 			return m;
 		}
 	}
+	
+	public boolean isOver()
+	{
+		boolean white = false;
+		boolean firstTime = true;
+		for(int i = 0; i < 8; i++)
+		{
+			for(int j = 0; j < 8; j++)
+			{
+				//s.getPiece(0, 0);
+				//System.out.println(this.getPiece(i, j));
+				if(this.getPiece(i, j) > 0)
+				{
+					if(firstTime && this.isWhite(i, j))
+					{
+						white = true;
+						firstTime = false;
+					}
+					else if(firstTime)
+					{
+						firstTime = false;
+					}
+					else if(white)
+					{
+						if(!this.isWhite(i, j))
+						{
+							return false;
+						}
+					}
+					else
+					{
+						if(this.isWhite(i, j))
+						{
+							return false;
+						}
+					}
+				}
+			}
+		}
+		
+		return true;
+	}
+	
+	public boolean isOverPrint()
+	{
+		boolean white = false;
+		boolean firstTime = true;
+		for(int i = 0; i < 8; i++)
+		{
+			for(int j = 0; j < 8; j++)
+			{
+				//s.getPiece(0, 0);
+				//System.out.println(this.getPiece(i, j));
+				if(this.getPiece(i, j) > 0)
+				{
+					if(firstTime && this.isWhite(i, j))
+					{
+						white = true;
+						firstTime = false;
+					}
+					else if(firstTime)
+					{
+						firstTime = false;
+					}
+					else if(white)
+					{
+						if(!this.isWhite(i, j))
+						{
+							return false;
+						}
+					}
+					else
+					{
+						if(this.isWhite(i, j))
+						{
+							return false;
+						}
+					}
+				}
+			}
+		}
+		if(white)
+			System.out.println("White Wins");
+		else
+			System.out.println("Black Wins");
+		
+		return true;
+	}
 
+	private ChessState computerMove(int depth, boolean whiteMove) throws Exception
+	{
+		int bestValue;
+		if(whiteMove)
+			bestValue = Integer.MIN_VALUE;
+		else
+			bestValue = Integer.MAX_VALUE;
+		ChessMoveIterator it = this.iterator(whiteMove);     // Iterate over all valid moves
+		ChessState.ChessMove m;
+		ChessState nextMove = new ChessState(this);
+		depth -= 1;
+		while(it.hasNext())
+		{
+			ChessState tempMove = new ChessState(this);
+			m = it.next();
+			tempMove.move(m.xSource, m.ySource, m.xDest, m.yDest);
+			ABPruning ab = new ABPruning();
+			//System.out.println("Down");
+			int value = ab.alphabeta(tempMove, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, !whiteMove);
+			//this.printBoard(System.out);
+			//System.out.println("Value: " + value);
+			if(whiteMove)
+			{
+				if(value > bestValue)
+				{
+					bestValue = value;
+					nextMove = tempMove;
+					//nextMove.printBoard(System.out);
+					//System.out.println(value);
+				}
+			}
+			else
+			{
+				if(value < bestValue)
+				{
+					bestValue = value;
+					nextMove = tempMove;
+					//nextMove.printBoard(System.out);
+					//System.out.println(value);
+				}
+			}
+		}
+		return nextMove;
+	}
+	
+	private ChessState playerMove(Scanner reader, boolean isWhite) throws Exception
+	{
+		ChessState nextMove = new ChessState(this);
+		System.out.println("Your move?");
+		String input = reader.nextLine();
+		Pattern r = Pattern.compile("[a-h][1-8][a-h][1-8]");
+		boolean validMove = false;
+		if (input.charAt(0) == 'q')		
+		{
+			System.out.println("Exiting...");
+			System.exit(0);
+		}
+		if(r.matcher(input).matches())
+		{
+			boolean correctPlayer = this.isWhite((int)(input.charAt(0) - 'a'), (int)(input.charAt(1) - '1')) == isWhite;
+			validMove = correctPlayer && this.isValidMove((int)(input.charAt(0) - 'a'), (int)(input.charAt(1) - '1'), (int)(input.charAt(2) - 'a'), (int)(input.charAt(3) - '1'));
+		}
+		while(!r.matcher(input).matches() || !validMove)
+		{
+			System.out.println("This move is invalid.");
+			System.out.println("Your move?");
+
+			input = reader.nextLine();
+			if(r.matcher(input).matches())
+			{
+				boolean correctPlayer = this.isWhite((int)(input.charAt(0) - 'a'), (int)(input.charAt(1) - '1')) == isWhite;
+				validMove = correctPlayer && this.isValidMove((int)(input.charAt(0) - 'a'), (int)(input.charAt(1) - '1'), (int)(input.charAt(2) - 'a'), (int)(input.charAt(3) - '1'));
+			}
+			if (input.charAt(0) == 'q')
+			{
+				System.out.println("Exiting...");
+				System.exit(0);
+			}
+		}
+		nextMove.move((int)(input.charAt(0) - 'a'), (int)(input.charAt(1) - '1'), (int)(input.charAt(2) - 'a'), (int)(input.charAt(3) - '1'));
+		return nextMove;
+	}
 
 	public static void main(String[] args) throws Exception {
+		
 		ChessState s = new ChessState();
+		Scanner reader = new Scanner(System.in);
 		s.resetBoard();
-		s.printBoard(System.out);
-		System.out.println();
-		s.move(1/*B*/, 0/*1*/, 2/*C*/, 2/*3*/);
-		s.printBoard(System.out);
+		int whiteDepth = Integer.parseInt(args[0]);
+		int blackDepth = Integer.parseInt(args[1]);
+		boolean notOver = true;
+		while(notOver)
+		{
+			s.printBoard(System.out);
+			System.out.println();
+			if(whiteDepth > 0)
+			{
+				s = s.computerMove(whiteDepth, true);
+			}
+			else
+			{
+				s = s.playerMove(reader, true);
+			}
+			s.printBoard(System.out);
+			System.out.println();
+			if(blackDepth > 0)
+			{
+				s = s.computerMove(blackDepth, false);
+			}
+			else
+			{
+				s = s.playerMove(reader, false);
+			}
+			notOver = !s.isOver();
+		}
+		s.isOverPrint();
+		//s.printBoard(System.out);
+		//System.out.println();
+		reader.close();
 	}
 }
 
